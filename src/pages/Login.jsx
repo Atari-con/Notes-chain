@@ -5,44 +5,61 @@ export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [isRegister, setIsRegister] = useState(false); // режим: вход или регистрация
 
-  async function handleLogin(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
 
-    // авторизация
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    if (isRegister) {
+      // 🔹 Регистрация
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
-      return;
-    }
+      if (error) {
+        setError(error.message);
+        return;
+      }
 
-    // получаем профиль из таблицы profiles
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("email", email)
-      .single();
+      // Создаём запись в profiles
+      await supabase.from("profiles").insert([{ email, role: "user" }]);
 
-    if (profileError) {
-      setError("Не удалось получить профиль");
-      return;
-    }
+      alert("Проверь почту — подтверждение отправлено!");
+    } else {
+      // 🔹 Вход
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    // передаем наверх, что юзер залогинен и какая у него роль
-    if (onLogin) {
-      onLogin({ email, role: profile.role });
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("email", email)
+        .single();
+
+      if (profileError) {
+        setError("Не удалось получить профиль");
+        return;
+      }
+
+      if (onLogin) {
+        onLogin({ email, role: profile.role });
+      }
     }
   }
 
   return (
     <div className="container">
-      <h1 className="title">🔐 Вход</h1>
-      <form onSubmit={handleLogin} className="login-form">
+      <h1 className="title">{isRegister ? "📝 Регистрация" : "🔐 Вход"}</h1>
+      <form onSubmit={handleSubmit} className="login-form">
         <input
           type="email"
           placeholder="Твоя почта"
@@ -59,8 +76,18 @@ export default function Login({ onLogin }) {
           required
           className="input"
         />
-        <button type="submit" className="menu-btn">Войти</button>
+        <button type="submit" className="menu-btn">
+          {isRegister ? "Зарегистрироваться" : "Войти"}
+        </button>
       </form>
+
+      <button
+        className="link-btn"
+        onClick={() => setIsRegister(!isRegister)}
+      >
+        {isRegister ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
+      </button>
+
       {error && <p className="error">{error}</p>}
     </div>
   );
