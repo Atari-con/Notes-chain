@@ -48,14 +48,20 @@ export default function App() {
   }
 
   return (
+
+
     <Routes>
-      {/* Всегда доступны для просмотра (гостевой режим) */}
+      {!userData ? (
+      <Route path="*" element={<Login onLogin={setUserData} />} />
+  ) : (
+    <>
       <Route path="/" element={<Home user={userData} />} />
       <Route path="/s/:subjectName" element={<Subject user={userData} />} />
+    </>
+  )}
+     </Routes>
 
-      {/* Страница логина – если нужен вход */}
-      <Route path="/login" element={<Login onLogin={setUserData} />} />
-    </Routes>
+
   );
 }
 
