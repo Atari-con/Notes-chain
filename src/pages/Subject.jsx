@@ -26,7 +26,7 @@ export default function Subject({ user }) {
   }, [subjectName]);
 
   useEffect(() => {
-    if (!search.trim()) {
+    if (!search || !search.trim()) {
       setMatches([]);
       setMatchIndex(0);
       return;
@@ -177,6 +177,7 @@ export default function Subject({ user }) {
       console.error("Ошибка добавления заметки:", error);
       alert("Ошибка записи в базу");
     } else {
+      // добавляем новую заметку в начало списка, без загрузки всего заново
       setNotes((prev) => [data, ...prev]);
       setShowAddModal(false);
       setNewFile(null);
@@ -214,6 +215,7 @@ export default function Subject({ user }) {
           display: "flex",
           gap: 8,
           alignItems: "center",
+          flexWrap: "wrap", // позволяет корректно вести себя на узких экранах
         }}
       >
         <input
@@ -222,7 +224,8 @@ export default function Subject({ user }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
-            flex: 1,
+            flex: "1 1 220px", // растёт и сжимается; минимум ~220px
+            minWidth: 0,       // важно, чтобы корректно сжималось внутри flex
             padding: "8px 10px",
             borderRadius: 8,
             border: "1px solid #ddd",
@@ -230,7 +233,7 @@ export default function Subject({ user }) {
         />
 
         {/* Навигация по совпадениям */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           <button onClick={prevMatch} style={{ padding: "8px 10px" }}>⟵</button>
           <div style={{ minWidth: 64, textAlign: "center" }}>
             {matches.length ? `${matchIndex + 1} / ${matches.length}` : "0 / 0"}
@@ -247,6 +250,7 @@ export default function Subject({ user }) {
               color: "#fff",
               border: "none",
               borderRadius: 8,
+              flexShrink: 0,
             }}
           >
             Add +
@@ -254,162 +258,181 @@ export default function Subject({ user }) {
         )}
       </div>
 
-     {/* Лента */}
-<div style={{ marginTop: 12 }}>
-  {loading ? (
-    <p>Загрузка…</p>
-  ) : notes.length === 0 ? (
-    <p>Заметок пока нет</p>
-  ) : (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {notes.map((note) => {
-        const matched = isMatch(note.id);
-        const isCurrent = matches.length && matches[matchIndex] === note.id;
-        return (
-          <div
-            key={note.id}
-            ref={(el) => (itemRefs.current[note.id] = el)}
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              border: isCurrent
-                ? "3px solid #4cafef"
-                : matched
-                ? "2px solid #ffd54f"
-                : "1px solid #e6e6e6",
-              boxShadow: isCurrent ? "0 6px 18px rgba(76,175,239,0.12)" : "none",
-              background: "#fff",
-              position: "relative",
-            }}
-          >
-            {isAdmin && (
-              <button
-                onClick={() => deleteNote(note)}
-                title="Удалить заметку"
-                style={{
-                  position: "absolute",
-                  right: 8,
-                  top: 8,
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 18,
-                  opacity: 0.8,
-                }}
-              >
-                🗑
-              </button>
-            )}
+      {/* Лента */}
+      <div style={{ marginTop: 12 }}>
+        {loading ? (
+          <p>Загрузка…</p>
+        ) : notes.length === 0 ? (
+          <p>Заметок пока нет</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {notes.map((note) => {
+              const matched = isMatch(note.id);
+              const isCurrent = matches.length && matches[matchIndex] === note.id;
+              return (
+                <div
+                  key={note.id}
+                  ref={(el) => (itemRefs.current[note.id] = el)}
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    border: isCurrent
+                      ? "3px solid #4cafef"
+                      : matched
+                      ? "2px solid #ffd54f"
+                      : "1px solid #e6e6e6",
+                    boxShadow: isCurrent ? "0 6px 18px rgba(76,175,239,0.12)" : "none",
+                    background: "#fff",
+                    position: "relative",
+                  }}
+                >
+                  {isAdmin && (
+                    <button
+                      onClick={() => deleteNote(note)}
+                      title="Удалить заметку"
+                      style={{
+                        position: "absolute",
+                        right: 8,
+                        top: 8,
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 18,
+                        opacity: 0.8,
+                      }}
+                    >
+                      🗑
+                    </button>
+                  )}
 
-            {note.image_url && (
-              <img
-                src={note.image_url}
-                alt="note"
-                style={{ width: "100%", borderRadius: 8 }}
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
-            )}
-            {note.text_content && (
-              <p style={{ marginTop: 8, whiteSpace: "pre-wrap", color: "#333" }}>
-                {note.text_content}
-              </p>
-            )}
-            <div style={{ fontSize: 12, color: "#777", marginTop: 6 }}>
-              {new Date(note.created_at).toLocaleString()}
-            </div>
+                  {note.image_url && (
+                    <img
+                      src={note.image_url}
+                      alt="note"
+                      style={{ width: "100%", borderRadius: 8 }}
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                      }}
+                    />
+                  )}
+                  {note.text_content && (
+                    <p style={{ marginTop: 8, whiteSpace: "pre-wrap", color: "#333" }}>
+                      {note.text_content}
+                    </p>
+                  )}
+                  <div style={{ fontSize: 12, color: "#777", marginTop: 6 }}>
+                    {new Date(note.created_at).toLocaleString()}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-    </div>
-  )}
-</div>
+        )}
+      </div>
 
-{/* Модалка добавления */}
-{isAdmin && showAddModal && (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.45)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 200,
-      padding: 16,
-    }}
-  >
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 640,
-        background: "#fff",
-        borderRadius: 12,
-        padding: 16,
-        overflowX: "hidden", // чтобы ничего не вылезало по горизонтали
-      }}
-    >
-      <h3 style={{ marginTop: 0 }}>Добавить заметку — {subjectName}</h3>
-
-      <textarea
-        placeholder="Текст заметки..."
-        value={newText}
-        onChange={(e) => setNewText(e.target.value)}
-        style={{
-          width: "100%",
-          minHeight: 80,
-          padding: 8,
-          borderRadius: 8,
-          border: "1px solid #ddd",
-        }}
-      />
-
-      {/* ✅ фикс разъезжания на телефоне */}
-      <div
-        style={{
-          marginTop: 10,
-          display: "flex",
-          flexWrap: "wrap",       // ключ: разрешаем перенос
-          gap: 10,
-          alignItems: "center",
-        }}
-      >
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setNewFile(e.target.files?.[0] || null)}
-          style={{
-            flex: "1 1 220px",    // сжимается, но не меньше ~220px
-            minWidth: 0,
-            maxWidth: "100%",
-          }}
-        />
+      {/* Модалка добавления */}
+      {isAdmin && showAddModal && (
         <div
+          onClick={(e) => {
+            // закрываем модалку при клике по подложке (не по внутреннему контейнеру)
+            if (e.target === e.currentTarget) setShowAddModal(false);
+          }}
           style={{
-            marginLeft: "auto",   // справа на широких экранах
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
             display: "flex",
-            gap: 8,
-            flexWrap: "wrap",     // на узких — кнопки перенесутся
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 200,
+            padding: 16,
           }}
         >
-          <button onClick={() => setShowAddModal(false)} style={{ padding: "8px 12px" }}>
-            Отмена
-          </button>
-          <button
-            onClick={handleModalUpload}
+          <div
+            role="dialog"
+            aria-modal="true"
             style={{
-              padding: "8px 12px",
-              background: "#2b9bf4",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
+              width: "100%",
+              maxWidth: 640,
+              background: "#fff",
+              borderRadius: 12,
+              padding: 16,
+              boxSizing: "border-box",
+              maxHeight: "90vh",   // чтобы на мобилах не вылезало за экран
+              overflowY: "auto",
+              overflowX: "hidden",
             }}
           >
-            Загрузить
-          </button>
+            <h3 style={{ marginTop: 0 }}>Добавить заметку — {subjectName}</h3>
+
+            <textarea
+              placeholder="Текст заметки..."
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              style={{
+                width: "100%",
+                minHeight: 80,
+                padding: 8,
+                borderRadius: 8,
+                border: "1px solid #ddd",
+                boxSizing: "border-box",
+              }}
+            />
+
+            {/* responsive row: input + buttons */}
+            <div
+              style={{
+                marginTop: 10,
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setNewFile(e.target.files?.[0] || null)}
+                style={{
+                  flex: "1 1 220px",
+                  minWidth: 0,
+                  maxWidth: "100%",
+                }}
+                aria-label="Выбрать изображение"
+              />
+
+              <div
+                style={{
+                  marginLeft: "auto",
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  style={{ padding: "8px 12px" }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleModalUpload}
+                  style={{
+                    padding: "8px 12px",
+                    background: "#2b9bf4",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                  }}
+                >
+                  Загрузить
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  </div>
-)}
+  );
+}
+
